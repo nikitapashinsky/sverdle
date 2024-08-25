@@ -6,6 +6,28 @@
 	let currentGuess: string = $state('');
 	let previousGuesses: object[] = $state([]);
 
+	function checkInput(event: KeyboardEvent) {
+		if (!/^[a-zA-Z]$/.test(event.key)) {
+			event.preventDefault();
+		}
+	}
+
+	function handleSubmit(event: KeyboardEvent) {
+		if (event.key === 'Enter' && currentGuess.length === 5 && currentAttempt <= 6) {
+			console.log('Handling submit…');
+
+			console.log('Creating word object AND calling handleGuess…');
+			handleGuess(createWordObj(currentGuess), targetWord);
+
+			console.log('Resetting currentGuess…');
+			currentGuess = '';
+
+			console.log('Increasing currentAttempt…');
+			currentAttempt++;
+			console.log(currentAttempt);
+		}
+	}
+
 	function createWordObj(
 		guessedWord: string
 	): { letter: string; isInWord: boolean; isInCorrectPosition: boolean }[] {
@@ -14,6 +36,17 @@
 			isInWord: false,
 			isInCorrectPosition: false
 		}));
+	}
+
+	function handleGuess(
+		guessedWord: { letter: string; isInWord: boolean; isInCorrectPosition: boolean }[],
+		targetWord: string
+	) {
+		console.log('Handling guess…');
+		const checkedWord = checkWord(guessedWord, targetWord);
+		console.log('Adding checked word to previousGuesses…');
+		previousGuesses = [...previousGuesses, checkedWord];
+		console.log(previousGuesses);
 	}
 
 	function checkWord(
@@ -28,97 +61,44 @@
 		return checkedWord;
 	}
 
-	function handleGuess(
-		guessedWord: { letter: string; isInWord: boolean; isInCorrectPosition: boolean }[],
-		targetWord: string
-	) {
-		const checkedWord = checkWord(guessedWord, targetWord);
-		previousGuesses = [...previousGuesses, checkedWord];
-		console.log(previousGuesses?.[0]?.[0]?.isInWord);
-	}
-
-	function handleSubmit(event: KeyboardEvent) {
-		if (event.key === 'Enter' && currentGuess.length === 5 && currentAttempt <= 6) {
-			handleGuess(createWordObj(currentGuess), targetWord);
-			currentGuess = '';
-		}
-	}
-
-	function checkInput(event: KeyboardEvent) {
-		if (!/^[a-zA-Z]$/.test(event.key)) {
-			event.preventDefault();
-		}
-	}
-
-	function getClasses(i, j) {
+	function getClasses(wordIndex: number, letterIndex: number) {
 		return clsx(
 			'flex aspect-square w-11 items-center justify-center rounded-xl bg-neutral-200 text-center text-lg font-semibold uppercase',
 			{
-				'bg-yellow-500': previousGuesses[i]?.[j]?.isInWord
+				'bg-yellow-500': previousGuesses[wordIndex]?.[letterIndex]?.isInWord
 			},
 			{
-				'bg-green-500':
-					// prettier-ignore
-					previousGuesses[i]?.[j]?.isInWord &&
-					previousGuesses[i]?.[j]?.isInCorrectPosition
+				'bg-green-500': previousGuesses[wordIndex]?.[letterIndex]?.isInCorrectPosition
 			}
 		);
+	}
+
+	function renderWord(wordIndex: number, letterIndex: number) {
+		return previousGuesses[wordIndex]?.[letterIndex]?.letter;
 	}
 </script>
 
 <div class="flex flex-col items-center gap-8">
+	<div class="flex flex-col">
+		<p>Current attempt: {currentAttempt}</p>
+		<p>Remaining attempts: {7 - currentAttempt}</p>
+	</div>
 	<div class="flex flex-col gap-2">
-		{#each Array(6) as _, i}
+		{#each Array(6) as _, row}
 			<div class="flex gap-2">
-				{#each Array(5) as _, j}
-					<div class={getClasses(i, j)}>
-						{#if i + 1 < currentAttempt}
-							<!-- -->
-						{:else if i === currentAttempt}
-							<!-- -->
-						{:else}
-							<!-- Empty cell for future attempts -->
-						{/if}
+				{#each Array(5) as _, cell}
+					<div class={getClasses(row, cell)}>
+						{renderWord(row, cell)}
 					</div>
 				{/each}
 			</div>
 		{/each}
 	</div>
 
-	<!--
- clsx(
-		'flex aspect-square w-11 items-center justify-center rounded-xl bg-neutral-200 text-center text-lg font-semibold uppercase',
-		'bg-yellow-500': previousGuesses[i]?.[j]?.isInWord
-	)
-	-->
-
 	<div class="flex flex-col items-center gap-2">
 		<div class="flex gap-2">
 			{#each ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'] as letter}
-				<div
-					class={clsx(
-						`flex rounded-lg bg-neutral-200 px-3 py-4 hover:bg-neutral-300`
-						// {
-						// 	'bg-neutral-300 text-neutral-500':
-						// 		previousGuesses.join('').includes(letter) &&
-						// 		!targetWord.includes(letter) &&
-						// 		!previousGuesses[currentAttempt - 2].includes(letter)
-						// },
-						// {
-						// 	'bg-green-600 text-white':
-						// 		targetWord.includes(letter) &&
-						// 		previousGuesses.length > 0 &&
-						// 		previousGuesses[currentAttempt - 2].includes(letter)
-						// },
-						// {
-						// 	'bg-yellow-600':
-						// 		targetWord.includes(letter) &&
-						// 		previousGuesses.length > 0 &&
-						// 		previousGuesses[currentAttempt - 2].includes(letter) &&
-						// 		targetWord.charAt(0) !== letter
-						// }
-					)}
-				>
+				<div class={clsx(`flex rounded-lg bg-neutral-200 px-3 py-4 hover:bg-neutral-300`)}>
 					{letter}
 				</div>
 			{/each}
