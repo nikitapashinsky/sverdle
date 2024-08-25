@@ -1,85 +1,149 @@
 <script lang="ts">
-	// Word list
+	import { clsx } from 'clsx';
 
-	// I could store a single JSON or TypeScript file with all of the words?
-	// Or I could find an API and fetch the word from there.
-
-	// Game state
-
-	// I need some sort of overall game state. Is game in progress? Is it over? Did user win or lose?
-	// I need the current word (word-to-guess) obviously.
-	// I need to store the word entered by user, so that I can compare it to the word.
-	// I need to store number of attempts, so that game is finished either when the word is guessed correctly or 6 attempts ran out
-	// I need to store previously entered words as well so that I can display them and prevent user from entering the same word
-	// I have no idea how to test whether the letter is in a wrong place :( and what if there are 2 same letters in the word…
-
-	let targetWord: string = 'world';
-	let currentAttempt: number = $state(0);
+	let targetWord: string = $state('WORLD');
+	let currentAttempt: number = $state(1);
 	let currentGuess: string = $state('');
-	let submittedGuess: string = $state('');
-	let previousGuesses: Array<string> = $state([]);
+	let previousGuesses: object[] = $state([]);
 
-	function handleSubmit() {
-		// How to move all of these checks out of handleSubmit?
-		if (
-			currentGuess.length === 5 &&
-			previousGuesses.length <= 6 &&
-			!previousGuesses.includes(currentGuess)
-		) {
-			submittedGuess = currentGuess;
-			previousGuesses = [...previousGuesses, submittedGuess];
-			currentAttempt++;
+	function createWordObj(
+		guessedWord: string
+	): { letter: string; isInWord: boolean; isInCorrectPosition: boolean }[] {
+		return [...guessedWord].map((letter) => ({
+			letter: letter.toUpperCase(),
+			isInWord: false,
+			isInCorrectPosition: false
+		}));
+	}
+
+	function checkWord(
+		guessedWord: { letter: string; isInWord: boolean; isInCorrectPosition: boolean }[],
+		targetWord: string
+	) {
+		const checkedWord: object[] = guessedWord.map((letter, index) => ({
+			...letter,
+			isInWord: targetWord.includes(letter.letter),
+			isInCorrectPosition: targetWord[index] === letter.letter
+		}));
+		return checkedWord;
+	}
+
+	function handleGuess(
+		guessedWord: { letter: string; isInWord: boolean; isInCorrectPosition: boolean }[],
+		targetWord: string
+	) {
+		const checkedWord = checkWord(guessedWord, targetWord);
+		previousGuesses = [...previousGuesses, checkedWord];
+		console.log(previousGuesses?.[0]?.[0]?.isInWord);
+	}
+
+	function handleSubmit(event: KeyboardEvent) {
+		if (event.key === 'Enter' && currentGuess.length === 5 && currentAttempt <= 6) {
+			handleGuess(createWordObj(currentGuess), targetWord);
 			currentGuess = '';
-			submittedGuess = '';
-			console.log(previousGuesses);
 		}
 	}
 
-	function handleKeyDown(event: KeyboardEvent) {
-		if (event.key === 'Enter') {
-			event.preventDefault();
-			handleSubmit();
-		} else if (!/^[a-zA-Z]$/.test(event.key) && !['Backspace', 'Delete'].includes(event.key)) {
+	function checkInput(event: KeyboardEvent) {
+		if (!/^[a-zA-Z]$/.test(event.key)) {
 			event.preventDefault();
 		}
+	}
+
+	function getClasses(i, j) {
+		return clsx(
+			'flex aspect-square w-11 items-center justify-center rounded-xl bg-neutral-200 text-center text-lg font-semibold uppercase',
+			{
+				'bg-yellow-500': previousGuesses[i]?.[j]?.isInWord
+			},
+			{
+				'bg-green-500':
+					// prettier-ignore
+					previousGuesses[i]?.[j]?.isInWord &&
+					previousGuesses[i]?.[j]?.isInCorrectPosition
+			}
+		);
 	}
 </script>
 
-<!--
-User interface
+<div class="flex flex-col items-center gap-8">
+	<div class="flex flex-col gap-2">
+		{#each Array(6) as _, i}
+			<div class="flex gap-2">
+				{#each Array(5) as _, j}
+					<div class={getClasses(i, j)}>
+						{#if i + 1 < currentAttempt}
+							<!-- -->
+						{:else if i === currentAttempt}
+							<!-- -->
+						{:else}
+							<!-- Empty cell for future attempts -->
+						{/if}
+					</div>
+				{/each}
+			</div>
+		{/each}
+	</div>
 
-- It's a 5x6 grid.
-- Upon user input, entered word is separated into letters and mapped to the 5 squares in the current row.
-- The letters are then colored either gray, green, or yellow.
-- A text input at the bottom
-- (or potentially a visual keyboard for v2)
+	<!--
+ clsx(
+		'flex aspect-square w-11 items-center justify-center rounded-xl bg-neutral-200 text-center text-lg font-semibold uppercase',
+		'bg-yellow-500': previousGuesses[i]?.[j]?.isInWord
+	)
+	-->
 
--->
-
-<div class="flex flex-col gap-2">
-	{#each Array(6) as _, i}
+	<div class="flex flex-col items-center gap-2">
 		<div class="flex gap-2">
-			{#each Array(5) as _, j}
-				<div class="aspect-square w-11 bg-neutral-200 rounded-md">
-					{#if i < currentAttempt}
-						{previousGuesses[i][j]}
-					{:else if i === currentAttempt}
-						{submittedGuess[j]}
-					{:else}
-						<!-- Empty cell for future attempts -->
-					{/if}
+			{#each ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'] as letter}
+				<div
+					class={clsx(
+						`flex rounded-lg bg-neutral-200 px-3 py-4 hover:bg-neutral-300`
+						// {
+						// 	'bg-neutral-300 text-neutral-500':
+						// 		previousGuesses.join('').includes(letter) &&
+						// 		!targetWord.includes(letter) &&
+						// 		!previousGuesses[currentAttempt - 2].includes(letter)
+						// },
+						// {
+						// 	'bg-green-600 text-white':
+						// 		targetWord.includes(letter) &&
+						// 		previousGuesses.length > 0 &&
+						// 		previousGuesses[currentAttempt - 2].includes(letter)
+						// },
+						// {
+						// 	'bg-yellow-600':
+						// 		targetWord.includes(letter) &&
+						// 		previousGuesses.length > 0 &&
+						// 		previousGuesses[currentAttempt - 2].includes(letter) &&
+						// 		targetWord.charAt(0) !== letter
+						// }
+					)}
+				>
+					{letter}
 				</div>
 			{/each}
 		</div>
-	{/each}
-</div>
+		<div class="flex gap-2">
+			{#each ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'] as letter}
+				<div class="flex rounded-lg bg-neutral-200 px-3 py-4 hover:bg-neutral-300">{letter}</div>
+			{/each}
+		</div>
+		<div class="flex gap-2">
+			<div class="flex rounded-lg bg-neutral-200 px-3 py-4 hover:bg-neutral-300">Enter</div>
+			{#each ['Z', 'X', 'C', 'V', 'B', 'N', 'M'] as letter}
+				<div class="flex rounded-lg bg-neutral-200 px-3 py-4 hover:bg-neutral-300">{letter}</div>
+			{/each}
+			<div class="flex rounded-lg bg-neutral-200 px-3 py-4 hover:bg-neutral-300">⌫</div>
+		</div>
+	</div>
 
-<input
-	type="text"
-	bind:value={currentGuess}
-	onchange={handleSubmit}
-	minlength="5"
-	maxlength="5"
-	onkeydown={handleKeyDown}
-	class="bg-neutral-200 rounded-md"
-/>
+	<input
+		bind:value={currentGuess}
+		onkeypress={checkInput}
+		onkeydown={handleSubmit}
+		type="text"
+		minlength="5"
+		maxlength="5"
+		class="h-11 rounded-xl bg-neutral-200 px-3 font-semibold uppercase tracking-widest"
+	/>
+</div>
