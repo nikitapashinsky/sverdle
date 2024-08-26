@@ -1,10 +1,29 @@
 <script lang="ts">
+	// TO DO
+	// [] Check for double letters!!
+	// [] Connect do dictionary API
+	// [] Only allow words from dictionary
+	// [] Handle win and loss conditions
+	// [] Force unique words?
+	// [] Listen for key presses instead of text input
+	// [] Highlight keys on press
+	// [] Add color states to visual keyboard
+	// [] Add animations
+	//
+	//
+	// How to handle duplicate letters…
+	//
+
 	import { clsx } from 'clsx';
 
-	let targetWord: string = $state('WORLD');
+	let targetWord: string = $state('JELLY');
 	let currentAttempt: number = $state(1);
 	let currentGuess: string = $state('');
-	let previousGuesses: object[] = $state([]);
+	let previousGuesses: string[] = $state([]);
+
+	function countLetter(word: string, letter: string): number {
+		return word.split(letter).length - 1;
+	}
 
 	function checkInput(event: KeyboardEvent) {
 		if (!/^[a-zA-Z]$/.test(event.key)) {
@@ -14,81 +33,56 @@
 
 	function handleSubmit(event: KeyboardEvent) {
 		if (event.key === 'Enter' && currentGuess.length === 5 && currentAttempt <= 6) {
-			console.log('Handling submit…');
-
-			console.log('Creating word object AND calling handleGuess…');
-			handleGuess(createWordObj(currentGuess), targetWord);
-
-			console.log('Resetting currentGuess…');
+			previousGuesses = [...previousGuesses, currentGuess.toUpperCase()];
+			console.log(previousGuesses);
 			currentGuess = '';
-
-			console.log('Increasing currentAttempt…');
 			currentAttempt++;
-			console.log(currentAttempt);
 		}
 	}
 
-	function createWordObj(
-		guessedWord: string
-	): { letter: string; isInWord: boolean; isInCorrectPosition: boolean }[] {
-		return [...guessedWord].map((letter) => ({
-			letter: letter.toUpperCase(),
-			isInWord: false,
-			isInCorrectPosition: false
-		}));
-	}
-
-	function handleGuess(
-		guessedWord: { letter: string; isInWord: boolean; isInCorrectPosition: boolean }[],
-		targetWord: string
-	) {
-		console.log('Handling guess…');
-		const checkedWord = checkWord(guessedWord, targetWord);
-		console.log('Adding checked word to previousGuesses…');
-		previousGuesses = [...previousGuesses, checkedWord];
-		console.log(previousGuesses);
-	}
-
-	function checkWord(
-		guessedWord: { letter: string; isInWord: boolean; isInCorrectPosition: boolean }[],
-		targetWord: string
-	) {
-		const checkedWord: object[] = guessedWord.map((letter, index) => ({
-			...letter,
-			isInWord: targetWord.includes(letter.letter),
-			isInCorrectPosition: targetWord[index] === letter.letter
-		}));
-		return checkedWord;
-	}
+	const baseTileStyle =
+		'flex aspect-square w-16 items-center justify-center rounded-xl text-center text-4xl font-bold uppercase bg-neutral-200';
 
 	function getClasses(wordIndex: number, letterIndex: number) {
+		const letter = previousGuesses[wordIndex]?.[letterIndex];
+		let letterBudget: number;
+		letterBudget = countLetter(targetWord, targetWord[letterIndex]);
+		console.log(letterBudget);
 		return clsx(
-			'flex aspect-square w-11 items-center justify-center rounded-xl bg-neutral-200 text-center text-lg font-semibold uppercase',
+			baseTileStyle,
 			{
-				'bg-yellow-500': previousGuesses[wordIndex]?.[letterIndex]?.isInWord
+				'bg-neutral-500 text-white': currentAttempt > wordIndex + 1 && !targetWord.includes(letter)
 			},
 			{
-				'bg-green-500': previousGuesses[wordIndex]?.[letterIndex]?.isInCorrectPosition
+				'bg-yellow-500': targetWord.includes(letter)
+			},
+			{
+				'bg-green-500 text-white':
+					targetWord[letterIndex] === previousGuesses?.[wordIndex]?.[letterIndex]
 			}
 		);
 	}
 
-	function renderWord(wordIndex: number, letterIndex: number) {
-		return previousGuesses[wordIndex]?.[letterIndex]?.letter;
+	function renderPreviousGuess(wordIndex: number, letterIndex: number) {
+		return previousGuesses[wordIndex]?.[letterIndex];
+	}
+
+	function renderCurrentGuess(letterIndex: number) {
+		return [...currentGuess][letterIndex];
 	}
 </script>
 
 <div class="flex flex-col items-center gap-8">
-	<div class="flex flex-col">
-		<p>Current attempt: {currentAttempt}</p>
-		<p>Remaining attempts: {7 - currentAttempt}</p>
-	</div>
 	<div class="flex flex-col gap-2">
 		{#each Array(6) as _, row}
 			<div class="flex gap-2">
-				{#each Array(5) as _, cell}
+				{#each Array(5) as _, cell (cell)}
 					<div class={getClasses(row, cell)}>
-						{renderWord(row, cell)}
+						{#if currentAttempt === row + 1}
+							{renderCurrentGuess(cell)}
+						{:else if currentAttempt > row + 1}
+							{renderPreviousGuess(row, cell)}
+						{:else}{/if}
 					</div>
 				{/each}
 			</div>
